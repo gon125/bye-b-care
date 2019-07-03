@@ -51,7 +51,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 Document doc;
                 if ((doc = Jsoup.connect(htmlPageUrl).get()) == null) System.out.println("Server Error....");
-                htmlContentInStringFormat += doc.text();
+                htmlContentInStringFormat = doc.text();
             } catch (IOException e) {
                 e.printStackTrace();
             }
