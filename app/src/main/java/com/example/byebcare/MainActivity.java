@@ -13,6 +13,7 @@ import org.json.JSONObject;
 public class MainActivity extends AppCompatActivity {
 
     private JSONObject jsonObject;
+    private Boolean babyIsInDanger = false;
     @BindView(R.id.button) Button button;
     @BindView(R.id.textView) TextView textView;
 
@@ -20,7 +21,19 @@ public class MainActivity extends AppCompatActivity {
     public void onClick(Button button) {
         button.setText("받음!");
         getData();
-        //sendNotification();
+        if(isBabyInDanger()) sendNotification();
+    }
+
+
+    private Boolean isBabyInDanger() {
+        evaluateData();
+
+        if (babyIsInDanger) return true;
+        else return false;
+    }
+
+    private void evaluateData() {
+
     }
 
     private void getData() {
