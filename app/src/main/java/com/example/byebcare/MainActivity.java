@@ -21,17 +21,17 @@ import android.widget.TextView;
 
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
-import org.w3c.dom.Text;
 
 import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
 
-    private String htmlPageUrl = "http://10.4.104.130";
-    private String htmlContentInStringFormat="asdfsdf";
+    private String htmlPageUrl = "http://10.4.104.131";
+    private String htmlContentInStringFormat="";
 
     @BindView(R.id.button) Button button;
     @BindView(R.id.textView) TextView textView;
+
     @OnClick(R.id.button)
     public void onClick(Button button) {
         button.setText("받음!");
@@ -49,9 +49,8 @@ public class MainActivity extends AppCompatActivity {
         @Override
         protected  Void doInBackground(Void... params) {
             try {
-                Document doc = Jsoup.connect(htmlPageUrl).get();
-
-                System.out.println(doc.text());
+                Document doc;
+                if ((doc = Jsoup.connect(htmlPageUrl).get()) == null) System.out.println("Server Error....");
                 htmlContentInStringFormat += doc.text();
             } catch (IOException e) {
                 e.printStackTrace();
