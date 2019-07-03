@@ -1,6 +1,14 @@
 package com.example.byebcare;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.NotificationCompat;
+
+import android.app.Notification;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.widget.Button;
 import butterknife.BindView;
@@ -20,7 +28,7 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.button)
     public void onClick(Button button) {
         button.setText("받음!");
-        getData();
+        //getData();
         if(isBabyInDanger()) sendNotification();
     }
 
@@ -33,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void evaluateData() {
-
+        babyIsInDanger = true;
     }
 
     private void getData() {
@@ -43,6 +51,22 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendNotification() {
 
+
+        NotificationCompat.Builder builder =
+                new NotificationCompat.Builder(this, null)
+                .setSmallIcon(R.drawable.ic_launcher_background)
+                .setContentTitle("dasdf")
+                .setContentText("asdfasdfasfd")
+                .setDefaults(Notification.DEFAULT_ALL)
+                .setPriority(Notification.PRIORITY_MAX);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://10.4.104.131"));
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+        builder.setContentIntent(pendingIntent);
+
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(001, builder.build());
     }
 
 
