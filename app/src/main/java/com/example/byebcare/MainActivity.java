@@ -1,29 +1,18 @@
 package com.example.byebcare;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.content.Context;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.os.Bundle;
 import android.widget.Button;
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
-import android.content.Intent;
 import android.widget.TextView;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-
-import java.io.IOException;
+import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
 
+    private JSONObject jsonObject;
     @BindView(R.id.button) Button button;
     @BindView(R.id.textView) TextView textView;
 
@@ -35,7 +24,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void getData() {
-        JsoupAsyncTask jsoupAsyncTask = new JsoupAsyncTask(textView);
+        JsoupAsyncTask jsoupAsyncTask = new JsoupAsyncTask(textView, jsonObject);
         jsoupAsyncTask.execute();
     }
 
