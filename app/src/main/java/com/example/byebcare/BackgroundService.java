@@ -45,9 +45,11 @@ public class BackgroundService extends IntentService {
         list.put("O", "체온");
         list.put("X", "X축");
         list.put("Y", "Y축");
+
+        //emergencyCall();
+
         while (true) {
             try {
-                emergencyCall();
                 Document doc;
                 doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
                 if (doc != null) {
