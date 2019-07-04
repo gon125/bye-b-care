@@ -100,7 +100,7 @@ public class BackgroundService extends IntentService {
         }
 
 
-        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("http://10.4.104.131"));
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
 
         builder.setContentIntent(pendingIntent);
