@@ -1,5 +1,6 @@
 package com.example.byebcare;
 
+import android.Manifest;
 import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -7,11 +8,11 @@ import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 
 import androidx.core.app.NotificationCompat;
-import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -19,6 +20,8 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Iterator;
 
 import static java.lang.Thread.sleep;
 
@@ -27,8 +30,10 @@ public class BackgroundService extends IntentService {
     String channelId = "CHANNEL_NO_1";
 
     private String htmlPageUrl = "http://10.4.104.131";
-    private String htmlContentInStringFormat="";
+    private String htmlContentInStringFormat = "";
     private JSONObject jsonObject;
+    private String notiText = "";
+    private HashMap<String, String> list = new HashMap<>();
 
     public BackgroundService() {
         super("BACKGROUNDSERVICE");
@@ -37,17 +42,27 @@ public class BackgroundService extends IntentService {
     @Override
     protected void onHandleIntent(Intent workIntent) {
         String dataString = workIntent.getDataString();
-        while(true) {
+        list.put("O", "체온");
+        list.put("X", "X축");
+        list.put("Y", "Y축");
+        while (true) {
             try {
+                emergencyCall();
                 Document doc;
                 doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
                 if (doc != null) {
                     htmlContentInStringFormat = doc.text();
                     jsonObject = new JSONObject(htmlContentInStringFormat);
-                    System.out.println("call" );
-                    sendNotification("아이정보", (String) jsonObject.get("AcX") + jsonObject.get("AcY"));
+                    Iterator<String> it = jsonObject.keys();
+                    while (it.hasNext()) {
+                        String key = it.next();
+                        notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
+                    }
+                    sendNotification("Your Baby's Current State", notiText);
+                    notiText = "";
+
+                    sleep(60000);
                 }
-                sleep(60000);
             } catch (IOException e) {
                 try {
                     sleep(10000);
@@ -127,4 +142,24 @@ public class BackgroundService extends IntentService {
         }
     }
 
+
+    private void emergencyCall() {
+        if (true) {
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(("tel:911111")));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                if (checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    Activity#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for Activity#requestPermissions for more details.
+                    return;
+                }
+            }
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(intent);
+        }
+    }
 }
