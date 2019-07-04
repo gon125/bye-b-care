@@ -86,7 +86,7 @@ public class BackgroundService extends IntentService {
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this, CHANNEL_ID)
-                        .setSmallIcon(R.drawable.ic_launcher_background)
+                        .setSmallIcon(R.drawable.ic_child_care_black_24dp)
                         .setContentTitle(titleText)
                         .setContentText(contentText);
 
