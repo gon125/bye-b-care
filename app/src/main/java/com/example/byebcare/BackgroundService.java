@@ -1,8 +1,6 @@
 package com.example.byebcare;
 
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.NotificationCompat;
-
+import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -11,61 +9,78 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Bundle;
-import android.widget.Button;
-import butterknife.BindView;
-import butterknife.ButterKnife;
-import butterknife.OnClick;
 import android.widget.TextView;
 
+import androidx.core.app.NotificationCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import org.json.JSONException;
 import org.json.JSONObject;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 
-public class MainActivity extends AppCompatActivity {
+import java.io.IOException;
 
-    private JSONObject jsonObject;
-    private Boolean babyIsInDanger = false;
-    Intent serviceIntent = new Intent();
+import static java.lang.Thread.sleep;
+
+public class BackgroundService extends IntentService {
 
     String channelId = "CHANNEL_NO_1";
-    @BindView(R.id.button) Button button;
-    @BindView(R.id.textView) TextView textView;
 
-    @OnClick(R.id.button)
-    public void onClick(Button button) {
-        button.setText("받음!");
-        //getData();
-        if(isBabyInDanger()) sendNotification();
+    private String htmlPageUrl = "http://10.4.104.131";
+    private String htmlContentInStringFormat="";
+    private JSONObject jsonObject;
+    Boolean serverError = false;
+    int i = 0;
+
+
+    public BackgroundService() {
+        super("BACKGROUNDSERVICE");
     }
 
+    @Override
+    protected void onHandleIntent(Intent workIntent) {
+        String dataString = workIntent.getDataString();
+        while(true) {
+            try {
+                Document doc;
+                doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
+                htmlContentInStringFormat = doc.text();
+                //jsonObject = new JSONObject(htmlContentInStringFormat);
+                System.out.println("call" + i); i++;
+                if (i % 10 == 0) {
+                   sendNotification("아이정보", htmlContentInStringFormat);
+                }
+                sleep(1000);
+            } catch (IOException e) {
+                System.out.println(e.getMessage() + "  my");
+                serverError = true;
 
-    private Boolean isBabyInDanger() {
-        evaluateData();
-
-        if (babyIsInDanger) return true;
-        else return false;
+            } catch (InterruptedException e) {
+                System.out.println("INDOT");
+            } /*catch (JSONException e) {
+                e.printStackTrace();
+            }*/ finally {
+                if (serverError) {
+                    sendNotification("ByeBCare", "서버연결상태가 좋지 않습니다. 아이를 확인해주세요.");
+                    serverError = false;
+                }
+            }
+        }
     }
 
-    private void evaluateData() {
-        babyIsInDanger = true;
-    }
-
-    private void getData() {
-        JsoupAsyncTask jsoupAsyncTask = new JsoupAsyncTask(textView, jsonObject);
-        jsoupAsyncTask.execute();
-    }
-
-    private void sendNotification() {
+    private void sendNotification(String titleText, String contentText) {
         String CHANNEL_ID = createNotificationChannel();
 
         NotificationCompat.Builder builder =
                 new NotificationCompat.Builder(this, CHANNEL_ID)
-                .setSmallIcon(R.drawable.ic_launcher_background)
-                .setContentTitle("dasdf")
-                .setContentText("asdfasdfasfd");
+                        .setSmallIcon(R.drawable.ic_launcher_background)
+                        .setContentTitle(titleText)
+                        .setContentText(contentText);
 
         if(CHANNEL_ID == null) {
             builder.setDefaults(Notification.DEFAULT_ALL)
-                .setPriority(Notification.PRIORITY_MAX);
+                    .setPriority(Notification.PRIORITY_MAX);
         } else {
             builder.setDefaults(Notification.DEFAULT_ALL)
                     .setPriority(NotificationManager.IMPORTANCE_HIGH)
@@ -117,24 +132,4 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        ButterKnife.bind(this);
-        button.setText("동기화");
-        serviceIntent.setClass(getApplication(), BackgroundService.class);
-        startService(serviceIntent);
-    }
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        if (serviceIntent == null) {
-            serviceIntent = new Intent();
-            serviceIntent.setClass(getApplication(), BackgroundService.class);
-            startService(serviceIntent);
-        }
-    }
 }
