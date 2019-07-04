@@ -9,7 +9,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
-import android.widget.TextView;
 
 import androidx.core.app.NotificationCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -30,9 +29,6 @@ public class BackgroundService extends IntentService {
     private String htmlPageUrl = "http://10.4.104.131";
     private String htmlContentInStringFormat="";
     private JSONObject jsonObject;
-    Boolean serverError = false;
-    int i = 0;
-
 
     public BackgroundService() {
         super("BACKGROUNDSERVICE");
@@ -45,26 +41,25 @@ public class BackgroundService extends IntentService {
             try {
                 Document doc;
                 doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
-                htmlContentInStringFormat = doc.text();
-                //jsonObject = new JSONObject(htmlContentInStringFormat);
-                System.out.println("call" + i); i++;
-                if (i % 10 == 0) {
-                   sendNotification("아이정보", htmlContentInStringFormat);
+                if (doc != null) {
+                    htmlContentInStringFormat = doc.text();
+                    jsonObject = new JSONObject(htmlContentInStringFormat);
+                    System.out.println("call" );
+                    sendNotification("아이정보", (String) jsonObject.get("AcX") + jsonObject.get("AcY"));
                 }
-                sleep(1000);
+                sleep(60000);
             } catch (IOException e) {
+                try {
+                    sleep(10000);
+                } catch (InterruptedException e1) {
+                    e1.printStackTrace();
+                }
+                sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.");
                 System.out.println(e.getMessage() + "  my");
-                serverError = true;
-
             } catch (InterruptedException e) {
                 System.out.println("INDOT");
-            } /*catch (JSONException e) {
+            } catch (JSONException e) {
                 e.printStackTrace();
-            }*/ finally {
-                if (serverError) {
-                    sendNotification("ByeBCare", "서버연결상태가 좋지 않습니다. 아이를 확인해주세요.");
-                    serverError = false;
-                }
             }
         }
     }
