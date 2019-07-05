@@ -7,6 +7,7 @@ import butterknife.ButterKnife;
 // org.json.JSONException;
 //import org.json.JSONObject;
 
+import com.anychart.APIlib;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -27,6 +28,7 @@ import com.anychart.core.cartesian.series.Base;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
 
 public class GraphActivity extends AppCompatActivity {
@@ -68,12 +70,20 @@ public class GraphActivity extends AppCompatActivity {
         cartesian.tooltip().positionMode(TooltipPositionMode.POINT);
         cartesian.title("Record of your baby condition");
         cartesian.yAxis(0).title("Temperature(celsius)");
+        cartesian.yAxis(0).staggerLines(80);
+
 
         Linear scalesLinear2 = Linear.instantiate();
         scalesLinear2.minimum(40d);
         scalesLinear2.maximum(100d);
         scalesLinear2.ticks("{interval:10}");
+
+        Linear scalesLinear = Linear.instantiate();
+        scalesLinear.minimum(0d);
+        scalesLinear.maximum(50d);
+        scalesLinear.ticks("{interval:5}");
         
+        cartesian.yAxis(0).scale(scalesLinear);
 
         com.anychart.core.axes.Linear extraYAxis = cartesian.yAxis(1);
         cartesian.yAxis(1).title("Pulse(number/minute)");
@@ -82,7 +92,7 @@ public class GraphActivity extends AppCompatActivity {
         extraYAxis.labels()
                 .padding(0d,0d,0d,5d);
 
-        
+
         cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
         List<DataEntry> seriesData = new ArrayList<>();
@@ -102,6 +112,7 @@ public class GraphActivity extends AppCompatActivity {
 
 
         Line seriesA = cartesian.line(tempAmbData);
+        seriesA.yScale(scalesLinear);
         seriesA.name("Ambient.t");
         seriesA.hovered().markers().enabled(true);
         seriesA.hovered().markers()
@@ -114,6 +125,7 @@ public class GraphActivity extends AppCompatActivity {
                 .offsetY(5d);
 
         Line seriesB = cartesian.line(tempBData);
+        seriesB.yScale(scalesLinear);
         seriesB.name("Baby.t");
         seriesB.hovered().markers().enabled(true);
         seriesB.hovered().markers()
