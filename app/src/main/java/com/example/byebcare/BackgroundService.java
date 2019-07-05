@@ -45,6 +45,9 @@ public class BackgroundService extends IntentService {
         list.put("O", "체온");
         list.put("X", "X축");
         list.put("Y", "Y축");
+        list.put("Z", "Z축");
+        list.put("A", "주변온도");
+        list.put("B", "맥박");
 
         //emergencyCall();
 
