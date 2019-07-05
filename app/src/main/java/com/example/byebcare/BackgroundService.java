@@ -1,16 +1,24 @@
 package com.example.byebcare;
 
 import android.Manifest;
-import android.app.IntentService;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
+import android.os.Handler.*;
+import android.os.Message;
+import android.os.Process;
+import android.widget.Toast;
 
 import androidx.core.app.NotificationCompat;
 
@@ -25,8 +33,10 @@ import java.util.Iterator;
 
 import static java.lang.Thread.sleep;
 
-public class BackgroundService extends IntentService {
+public class BackgroundService extends Service {
 
+    private Looper serviceLooper;
+    private ServiceHandler serviceHandler;
     String channelId = "CHANNEL_NO_1";
 
     private String htmlPageUrl = "http://10.4.104.131";
@@ -35,56 +45,89 @@ public class BackgroundService extends IntentService {
     private String notiText = "";
     private HashMap<String, String> list = new HashMap<>();
 
-    public BackgroundService() {
-        super("BACKGROUNDSERVICE");
+    private final class ServiceHandler extends Handler {
+        public ServiceHandler(Looper looper) {
+            super(looper);
+        }
+        @Override public void handleMessage(Message msg) {
+            // would do work here
+
+            //emergencyCall();
+
+            while (true) {
+                try {
+                    Document doc;
+                    doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
+                    if (doc != null) {
+                        htmlContentInStringFormat = doc.text();
+                        jsonObject = new JSONObject(htmlContentInStringFormat);
+                        Iterator<String> it = jsonObject.keys();
+                        while (it.hasNext()) {
+                            String key = it.next();
+                            notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
+                        }
+                        sendNotification("Your Baby's Current State", notiText);
+                        notiText = "";
+
+                        sleep(60000);
+                    }
+                } catch (IOException e) {
+                    try {
+                        sleep(10000);
+                    } catch (InterruptedException e1) {
+                        e1.printStackTrace();
+                    }
+                    sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.");
+                    System.out.println(e.getMessage() + "  my");
+                } catch (InterruptedException e) {
+                    System.out.println("INDOT");
+                } catch (JSONException e) {
+                    e.printStackTrace();
+                }
+            }
+            //Stop the service using the startId, so we don't stop the service
+            //stopSelf(msg.arg1);
+        }
     }
 
     @Override
-    protected void onHandleIntent(Intent workIntent) {
-        String dataString = workIntent.getDataString();
+    public void onCreate() {
+
+        HandlerThread thread = new HandlerThread("ServiceStartArguments", Process.THREAD_PRIORITY_FOREGROUND);
+        thread.start();
+        serviceLooper = thread.getLooper();
+        serviceHandler = new ServiceHandler(serviceLooper);
+        startForeground(1, sendNotification("ByeBCare", "ByeBCare Service is running..."));
         list.put("O", "체온");
         list.put("X", "X축");
         list.put("Y", "Y축");
         list.put("Z", "Z축");
         list.put("A", "주변온도");
         list.put("B", "맥박");
-
-        //emergencyCall();
-
-        while (true) {
-            try {
-                Document doc;
-                doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
-                if (doc != null) {
-                    htmlContentInStringFormat = doc.text();
-                    jsonObject = new JSONObject(htmlContentInStringFormat);
-                    Iterator<String> it = jsonObject.keys();
-                    while (it.hasNext()) {
-                        String key = it.next();
-                        notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
-                    }
-                    sendNotification("Your Baby's Current State", notiText);
-                    notiText = "";
-
-                    sleep(60000);
-                }
-            } catch (IOException e) {
-                try {
-                    sleep(10000);
-                } catch (InterruptedException e1) {
-                    e1.printStackTrace();
-                }
-                sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.");
-                System.out.println(e.getMessage() + "  my");
-            } catch (InterruptedException e) {
-                System.out.println("INDOT");
-            } catch (JSONException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
-    private void sendNotification(String titleText, String contentText) {
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
+
+        Message msg = serviceHandler.obtainMessage();
+        msg.arg1 = startId;
+        serviceHandler.sendMessage(msg);
+        // If we get killed, after returning from here, restart
+        return START_REDELIVER_INTENT;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        Toast.makeText(this, "service done", Toast.LENGTH_SHORT).show();
+    }
+
+    private Notification sendNotification(String titleText, String contentText) {
         String CHANNEL_ID = createNotificationChannel();
 
         NotificationCompat.Builder builder =
@@ -110,6 +153,7 @@ public class BackgroundService extends IntentService {
 
         NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
         notificationManager.notify(001, builder.build());
+        return builder.build();
     }
 
     private String createNotificationChannel() {
@@ -167,4 +211,5 @@ public class BackgroundService extends IntentService {
             startActivity(intent);
         }
     }
+
 }

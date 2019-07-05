@@ -46,8 +46,11 @@ public class MainActivity extends AppCompatActivity {
     }*/
 
     private void startBackgroundService() {
+
         serviceIntent.setClass(getApplication(), BackgroundService.class);
-        startService(serviceIntent);
+
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(serviceIntent);
+            else startService(serviceIntent);
     }
 
     private void askForCallPermission() {
