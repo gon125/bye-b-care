@@ -15,7 +15,6 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
-import android.os.Handler.*;
 import android.os.Message;
 import android.os.Process;
 import android.widget.Toast;
@@ -31,61 +30,73 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 
-import static java.lang.Thread.sleep;
-
 public class BackgroundService extends Service {
 
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
-    String channelId = "CHANNEL_NO_1";
-
-    private String htmlPageUrl = "http://10.4.104.131";
-    private String htmlContentInStringFormat = "";
     private JSONObject jsonObject;
-    private String notiText = "";
     private HashMap<String, String> list = new HashMap<>();
+
+    private String htmlPageUrl = G.SERVER_URL;
+    private String htmlContentInStringFormat = "";
+    private String notiText = "";
+    private Boolean emergencyCallCanceled = false;
 
     private final class ServiceHandler extends Handler {
         public ServiceHandler(Looper looper) {
             super(looper);
         }
+
         @Override public void handleMessage(Message msg) {
-            // would do work here
+            super.handleMessage(msg);
 
-            //emergencyCall();
-
-            while (true) {
-                try {
-                    Document doc;
-                    doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
-                    if (doc != null) {
-                        htmlContentInStringFormat = doc.text();
-                        jsonObject = new JSONObject(htmlContentInStringFormat);
-                        Iterator<String> it = jsonObject.keys();
-                        while (it.hasNext()) {
-                            String key = it.next();
-                            notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
-                        }
-                        sendNotification("Your Baby's Current State", notiText);
-                        notiText = "";
-
-                        sleep(60000);
-                    }
-                } catch (IOException e) {
+            switch (msg.what) {
+                case G.START_POLLING :
+                    sendEmptyMessage(G.DO_POLLING);
+                    break;
+                case G.STOP_POLLING :
+                    removeMessages(G.DO_POLLING);
+                    break;
+                case G.NOTIFICATION_ACTION :
+                    emergencyCallCanceled = true;
+                    break;
+                case G.EMERGENCY_CALL :
+                    if(!emergencyCallCanceled)  { emergencyCall(); }
+                    break;
+                case G.DO_POLLING :
                     try {
-                        sleep(10000);
-                    } catch (InterruptedException e1) {
-                        e1.printStackTrace();
+                        Document doc = null;
+                        doc = Jsoup.connect(htmlPageUrl).timeout(10000).get();
+                        if (doc != null) {
+                            htmlContentInStringFormat = doc.text();
+                            jsonObject = new JSONObject(htmlContentInStringFormat);
+
+                            if(isBabyInDanger()) {
+                                sendNotification("EMERGENCY!!!", "YOUR BABY IS IN DANGER !!!", G.NOTIFICATION_EMERGENCY);
+                                sendEmptyMessageDelayed(G.EMERGENCY_CALL, G.EMERGENCY_CALL_DELAY);
+                                sendMessageAtFrontOfQueue(obtainMessage(G.STOP_POLLING));
+                                break;
+                            } else {
+                                Iterator<String> it = jsonObject.keys();
+                                while (it.hasNext()) {
+                                    String key = it.next();
+                                    notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
+                                }
+                                sendNotification("Your Baby's Current State", notiText, G.NOTIFICATION_DEFAULT);
+                                notiText = "";
+                            }
+                        }
+                    } catch (IOException e) {
+                        sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.", G.NOTIFICATION_DEFAULT);
+                        System.out.println(e.getMessage() + "  my");
+                    } catch (JSONException e) {
+                        e.printStackTrace();
                     }
-                    sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.");
-                    System.out.println(e.getMessage() + "  my");
-                } catch (InterruptedException e) {
-                    System.out.println("INDOT");
-                } catch (JSONException e) {
-                    e.printStackTrace();
-                }
+                    sendEmptyMessageDelayed(G.DO_POLLING, G.POLLING_FREQUENCY);
+                    break;
             }
-            //Stop the service using the startId, so we don't stop the service
+            //emergencyCall();
+            //Stop the service using the startId, so we don't stop the service that we use
             //stopSelf(msg.arg1);
         }
     }
@@ -97,7 +108,7 @@ public class BackgroundService extends Service {
         thread.start();
         serviceLooper = thread.getLooper();
         serviceHandler = new ServiceHandler(serviceLooper);
-        startForeground(1, sendNotification("ByeBCare", "ByeBCare Service is running..."));
+        startForeground(G.FOREGROUND_ID, createNotification("ByeBCare", "ByeBCare Service is running...",G.NOTIFICATION_FOREGROUND));
         list.put("O", "체온");
         list.put("X", "X축");
         list.put("Y", "Y축");
@@ -109,10 +120,11 @@ public class BackgroundService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Toast.makeText(this, "service starting", Toast.LENGTH_SHORT).show();
-
         Message msg = serviceHandler.obtainMessage();
+        msg.what = intent.getIntExtra(G.REQUEST_TYPE, msg.what);
         msg.arg1 = startId;
-        serviceHandler.sendMessage(msg);
+        if (msg.what == G.NOTIFICATION_ACTION) serviceHandler.sendMessageAtFrontOfQueue(msg);
+        else {serviceHandler.sendMessage(msg);}
         // If we get killed, after returning from here, restart
         return START_REDELIVER_INTENT;
     }
@@ -127,7 +139,7 @@ public class BackgroundService extends Service {
         Toast.makeText(this, "service done", Toast.LENGTH_SHORT).show();
     }
 
-    private Notification sendNotification(String titleText, String contentText) {
+    private Notification createNotification(String titleText, String contentText, int NOTIFICATION_TYPE) {
         String CHANNEL_ID = createNotificationChannel();
 
         NotificationCompat.Builder builder =
@@ -136,24 +148,52 @@ public class BackgroundService extends Service {
                         .setContentTitle(titleText)
                         .setContentText(contentText);
 
+        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+        builder.setContentIntent(pendingIntent);
+
         if(CHANNEL_ID == null) {
             builder.setDefaults(Notification.DEFAULT_ALL)
                     .setPriority(Notification.PRIORITY_MAX);
         } else {
             builder.setDefaults(Notification.DEFAULT_ALL)
                     .setPriority(NotificationManager.IMPORTANCE_HIGH)
-                    .setChannelId(channelId);
+                    .setChannelId(G.CHANNEL_ID);
         }
 
-
-        Intent intent = new Intent(getApplicationContext(), MainActivity.class);
-        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
-
-        builder.setContentIntent(pendingIntent);
-
-        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
-        notificationManager.notify(001, builder.build());
+        switch (NOTIFICATION_TYPE) {
+            case G.NOTIFICATION_DEFAULT:
+                builder.setTimeoutAfter(G.NOTIFICATION_TIMEOUT);
+                break;
+            case G.NOTIFICATION_EMERGENCY:
+                builder.addAction(createEmergencyAction());
+                break;
+            case G.NOTIFICATION_FOREGROUND:
+                break;
+        }
         return builder.build();
+    }
+
+    private NotificationCompat.Action createEmergencyAction() {
+        Intent intent = new Intent();
+        intent.setClass(getApplication(), BackgroundService.class);
+        intent.putExtra(G.REQUEST_TYPE, G.NOTIFICATION_ACTION);
+
+        PendingIntent pendingIntent;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            pendingIntent = PendingIntent.getForegroundService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        } else {
+            pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        }
+
+       return new NotificationCompat.Action.Builder(R.drawable.ic_child_care_black_24dp, "NO NEED TO CALL EMERGENCY",pendingIntent)
+                .build();
+    }
+
+    private void sendNotification(String titleText, String contentText, int NOTIFICATION_TYPE) {
+        Notification notification = createNotification(titleText, contentText, NOTIFICATION_TYPE);
+        NotificationManager notificationManager = (NotificationManager)getSystemService(Context.NOTIFICATION_SERVICE);
+        notificationManager.notify(NOTIFICATION_TYPE, notification);
     }
 
     private String createNotificationChannel() {
@@ -163,16 +203,16 @@ public class BackgroundService extends Service {
             // The id of the channel.
 
             // The user-visible name of the channel.
-            CharSequence channelName = "N";
+            CharSequence channelName = G.CHANNEL_NAME;
             // The user-visible description of the channel.
-            String channelDescription = "d";
+            String channelDescription = G.CHANNEL_DESCRIPTION;
             int channelImportance = NotificationManager.IMPORTANCE_HIGH;
             boolean channelEnableVibrate = true;
             int channelLockscreenVisibility = NotificationCompat.VISIBILITY_PRIVATE;
 
             // Initializes NotificationChannel.
             NotificationChannel notificationChannel =
-                    new NotificationChannel(channelId, channelName, channelImportance);
+                    new NotificationChannel(G.CHANNEL_ID, channelName, channelImportance);
             notificationChannel.setDescription(channelDescription);
             notificationChannel.enableVibration(channelEnableVibrate);
             notificationChannel.setLockscreenVisibility(channelLockscreenVisibility);
@@ -184,13 +224,16 @@ public class BackgroundService extends Service {
                     (NotificationManager) this.getSystemService(Context.NOTIFICATION_SERVICE);
             notificationManager.createNotificationChannel(notificationChannel);
 
-            return channelId;
+            return notificationChannel.getId();
         } else {
             // Returns null for pre-O (26) devices.
             return null;
         }
     }
 
+    private Boolean isBabyInDanger() {
+        return true;
+    }
 
     private void emergencyCall() {
         if (true) {
