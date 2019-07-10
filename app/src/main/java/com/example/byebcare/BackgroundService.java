@@ -1,6 +1,7 @@
 package com.example.byebcare;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -57,11 +58,12 @@ public class BackgroundService extends Service {
                 case G.STOP_POLLING :
                     removeMessages(G.DO_POLLING);
                     break;
-                case G.NOTIFICATION_ACTION :
+                case G.EMERGENCY_CALL_CANCELED :
                     emergencyCallCanceled = true;
                     break;
                 case G.EMERGENCY_CALL :
                     if(!emergencyCallCanceled)  { emergencyCall(); }
+                    stopSelf();
                     break;
                 case G.DO_POLLING :
                     try {
@@ -123,7 +125,7 @@ public class BackgroundService extends Service {
         Message msg = serviceHandler.obtainMessage();
         msg.what = intent.getIntExtra(G.REQUEST_TYPE, msg.what);
         msg.arg1 = startId;
-        if (msg.what == G.NOTIFICATION_ACTION) serviceHandler.sendMessageAtFrontOfQueue(msg);
+        if (msg.what == G.EMERGENCY_CALL_CANCELED) serviceHandler.sendMessageAtFrontOfQueue(msg);
         else {serviceHandler.sendMessage(msg);}
         // If we get killed, after returning from here, restart
         return START_REDELIVER_INTENT;
@@ -166,9 +168,11 @@ public class BackgroundService extends Service {
                 builder.setTimeoutAfter(G.NOTIFICATION_TIMEOUT);
                 break;
             case G.NOTIFICATION_EMERGENCY:
+                builder.setTimeoutAfter(G.NOTIFICATION_TIMEOUT);
                 builder.addAction(createEmergencyAction());
                 break;
             case G.NOTIFICATION_FOREGROUND:
+                builder.addAction(createForegroundAction());
                 break;
         }
         return builder.build();
@@ -177,7 +181,7 @@ public class BackgroundService extends Service {
     private NotificationCompat.Action createEmergencyAction() {
         Intent intent = new Intent();
         intent.setClass(getApplication(), BackgroundService.class);
-        intent.putExtra(G.REQUEST_TYPE, G.NOTIFICATION_ACTION);
+        intent.putExtra(G.REQUEST_TYPE, G.EMERGENCY_CALL_CANCELED);
 
         PendingIntent pendingIntent;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -187,6 +191,14 @@ public class BackgroundService extends Service {
         }
 
        return new NotificationCompat.Action.Builder(R.drawable.ic_child_care_black_24dp, "NO NEED TO CALL EMERGENCY",pendingIntent)
+                .build();
+    }
+    private NotificationCompat.Action createForegroundAction() {
+        Intent intent = new Intent();
+        intent.setClass(getApplication(), MainActivity.class);
+        PendingIntent pendingIntent;
+        pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        return new NotificationCompat.Action.Builder(R.drawable.ic_child_care_black_24dp, "Click To Stop Service",pendingIntent)
                 .build();
     }
 
@@ -237,7 +249,7 @@ public class BackgroundService extends Service {
 
     private void emergencyCall() {
         if (true) {
-            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse(("tel:911111")));
+            Intent intent = new Intent(Intent.ACTION_CALL, Uri.parse("tel:" + G.EMERGENCY_CALL_NUMBER));
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (checkSelfPermission(Manifest.permission.CALL_PHONE) != PackageManager.PERMISSION_GRANTED) {
                     // TODO: Consider calling
