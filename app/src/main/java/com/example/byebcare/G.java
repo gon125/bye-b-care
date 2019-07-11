@@ -13,6 +13,7 @@ public class G {
     public static final int STOP_POLLING = 2;
     public static final int EMERGENCY_CALL_CANCELED = 3;
     public static final int EMERGENCY_CALL = 4;
+    public static final int STOP_FOREGROUND_SERVICE = 5;
 
     //NOTIFICATION_TYPE
     public static final int NOTIFICATION_DEFAULT = 0;
