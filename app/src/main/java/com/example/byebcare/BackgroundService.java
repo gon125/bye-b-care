@@ -65,6 +65,9 @@ public class BackgroundService extends Service {
                     if(!emergencyCallCanceled)  { emergencyCall(); }
                     stopSelf();
                     break;
+                case G.STOP_FOREGROUND_SERVICE :
+                    stopService(new Intent(getApplication(), BackgroundService.class));
+                    break;
                 case G.DO_POLLING :
                     try {
                         Document doc = null;
@@ -195,10 +198,11 @@ public class BackgroundService extends Service {
     }
     private NotificationCompat.Action createForegroundAction() {
         Intent intent = new Intent();
-        intent.setClass(getApplication(), MainActivity.class);
+        intent.setClass(getApplication(), BackgroundService.class);
+        intent.putExtra(G.REQUEST_TYPE, G.STOP_FOREGROUND_SERVICE);
         PendingIntent pendingIntent;
         pendingIntent = PendingIntent.getService(this, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
-        return new NotificationCompat.Action.Builder(R.drawable.ic_child_care_black_24dp, "Click To Stop Service",pendingIntent)
+        return new NotificationCompat.Action.Builder(R.drawable.ic_child_care_black_24dp, "ClICK TO STOP SERVICE",pendingIntent)
                 .build();
     }
 
@@ -244,7 +248,7 @@ public class BackgroundService extends Service {
     }
 
     private Boolean isBabyInDanger() {
-        return true;
+        return false;
     }
 
     private void emergencyCall() {
