@@ -4,7 +4,7 @@ public class G {
     private static final int SECONDS = 1000;
 
 
-    public static final int POLLING_FREQUENCY = 60 * SECONDS;
+    public static final int POLLING_FREQUENCY = 30 * SECONDS;
     public static final int EMERGENCY_CALL_DELAY = 10 * SECONDS;
 
     //Intent REQUEST_TYPE
@@ -25,7 +25,6 @@ public class G {
 
     //UNIQUE NOTIFICATION CHANNEL ID FOR FOREGROUND NOTIFICATION
     public static final int FOREGROUND_ID = 1;
-
 
     //
     public static final String REQUEST_TYPE = "REQUEST_TYPE";
