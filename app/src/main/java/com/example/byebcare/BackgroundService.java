@@ -1,15 +1,16 @@
 package com.example.byebcare;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
@@ -31,12 +32,17 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Iterator;
 
+import com.example.byebcare.BioDataContract.BioDataDbHelper;
+import com.example.byebcare.BioDataContract.BioDataEntry;
+
 public class BackgroundService extends Service {
 
     private Looper serviceLooper;
     private ServiceHandler serviceHandler;
     private JSONObject jsonObject;
     private HashMap<String, String> list = new HashMap<>();
+    private SQLiteDatabase db;
+    private ContentValues values = new ContentValues();
 
     private String htmlPageUrl = G.SERVER_URL;
     private String htmlContentInStringFormat = "";
@@ -75,7 +81,6 @@ public class BackgroundService extends Service {
                         if (doc != null) {
                             htmlContentInStringFormat = doc.text();
                             jsonObject = new JSONObject(htmlContentInStringFormat);
-
                             if(isBabyInDanger()) {
                                 sendNotification("EMERGENCY!!!", "YOUR BABY IS IN DANGER !!!", G.NOTIFICATION_EMERGENCY);
                                 sendEmptyMessageDelayed(G.EMERGENCY_CALL, G.EMERGENCY_CALL_DELAY);
@@ -90,6 +95,8 @@ public class BackgroundService extends Service {
                                 sendNotification("Your Baby's Current State", notiText, G.NOTIFICATION_DEFAULT);
                                 notiText = "";
                             }
+                            //Store data to db
+                            saveBioData();
                         }
                     } catch (IOException e) {
                         sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.", G.NOTIFICATION_DEFAULT);
@@ -114,6 +121,10 @@ public class BackgroundService extends Service {
         serviceLooper = thread.getLooper();
         serviceHandler = new ServiceHandler(serviceLooper);
         startForeground(G.FOREGROUND_ID, createNotification("ByeBCare", "ByeBCare Service is running...",G.NOTIFICATION_FOREGROUND));
+
+        //SQLiteDatabase Starts
+        db = BioDataDbHelper.getInstance(this).getWritableDatabase();
+
         list.put("O", "체온");
         list.put("X", "X축");
         list.put("Y", "Y축");
@@ -179,6 +190,24 @@ public class BackgroundService extends Service {
                 break;
         }
         return builder.build();
+    }
+
+    private void saveBioData() {
+        try {
+            values.put(BioDataEntry.COLUMN_NAME_AMBIENT_TEMPERATURE,
+                    (Double) jsonObject.get("A"));
+            values.put(BioDataEntry.COLUMN_NAME_BABY_TEMPERATURE,
+                    (Double) jsonObject.get("O"));
+            values.put(BioDataEntry.COLUMN_NAME_BPM,
+                    (Integer) jsonObject.get("B"));
+            values.put(BioDataEntry.COLUMN_NAME_TIME,
+                    System.currentTimeMillis());
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        db.insert(BioDataEntry.TABLE_NAME, null, values);
+        values.clear();
     }
 
     private NotificationCompat.Action createEmergencyAction() {
