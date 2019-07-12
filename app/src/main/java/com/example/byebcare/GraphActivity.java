@@ -1,11 +1,19 @@
 package com.example.byebcare;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.graphics.Color;
+import android.graphics.DashPathEffect;
 import android.os.Bundle;
+import android.util.Log;
+import android.provider.ContactsContract;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
-// org.json.JSONException;
-//import org.json.JSONObject;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import com.anychart.APIlib;
 import com.anychart.AnyChart;
@@ -23,39 +31,71 @@ import com.anychart.enums.Orientation;
 import com.anychart.enums.Position;
 import com.anychart.enums.TooltipPositionMode;
 import com.anychart.graphics.vector.Stroke;
+import com.anychart.graphics.vector.StrokeLineCap;
+import com.anychart.graphics.vector.StrokeLineJoin;
 import com.anychart.scales.Linear;
 import com.anychart.core.cartesian.series.Base;
+import com.github.mikephil.charting.renderer.scatter.ChevronUpShapeRenderer;
 
+
+import org.json.JSONArray;
+
+import java.text.SimpleDateFormat;
+import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+
+import static java.lang.Thread.sleep;
+
+import com.example.byebcare.BioDataContract.BioDataDbHelper;
+import com.example.byebcare.BioDataContract.BioDataEntry;
 
 
 public class GraphActivity extends AppCompatActivity {
 
-   /* private JSONObject jsonObject;
+    private JSONObject jsonObject;
+    private double tempAmb;
+    private double tempB;
+    private int bpm;
+    private BioDataDbHelper bioDataDbHelper;
+    static int currnettime = 0 ;
 
-   public GraphActivity(JSONObject jsonObject){
-        this.jsonObject = jsonObject;
-        try{
-            Number tempAmb = (Number)jsonObject.get("A");
-            Number tempB = (Number)jsonObject.get("O");
-            Number bpm = (Number) jsonObject.get("B");
-        }catch (JSONException e){
-            e.printStackTrace();
-        }
-    }   */
     @BindView(R.id.any_chart_view) AnyChartView anyChartView;
 
+    public GraphActivity(){
+
+    }
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
         ButterKnife.bind(this);
         anyChartView.setProgressBar(findViewById(R.id.progress_bar));
+        bioDataDbHelper = BioDataDbHelper.getInstance(this);
+
+        SQLiteDatabase bioDB = bioDataDbHelper.getWritableDatabase();
+
+        Cursor c = bioDB.query(
+                BioDataEntry.TABLE_NAME,
+                null,
+                null,
+                null,
+                null,
+                null,
+                BioDataEntry.COLUMN_NAME_TIME+" DESC",
+                "10");
 
         Cartesian cartesian = AnyChart.line();
-        Cartesian cartesian2 = AnyChart.column();
+       //Cartesian cartesian2 = AnyChart.column();
 
         cartesian.animation(true);
 
@@ -68,20 +108,27 @@ public class GraphActivity extends AppCompatActivity {
                 .yStroke((Stroke) null, null, null, (String) null, (String) null);
 
         cartesian.tooltip().positionMode(TooltipPositionMode.POINT);
-        cartesian.title("Record of your baby condition");
+        cartesian.title("<Record of your baby condition>");
         cartesian.yAxis(0).title("Temperature(celsius)");
-        cartesian.yAxis(0).staggerLines(80);
 
+        cartesian.lineMarker(0)    //체온 라인
+                .value(80d)
+                .axis(cartesian.yAxis(0))
+                .stroke("#A5B3B3",1d,"5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
+        cartesian.lineMarker(1)    // 맥박 라인
+                .value(20d)
+                .axis(cartesian.yAxis(1))
+                .stroke("#A5B3B3",1d,"5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
 
-        Linear scalesLinear2 = Linear.instantiate();
-        scalesLinear2.minimum(40d);
-        scalesLinear2.maximum(100d);
-        scalesLinear2.ticks("{interval:10}");
-
-        Linear scalesLinear = Linear.instantiate();
+        Linear scalesLinear = Linear.instantiate();   //체온 수치
         scalesLinear.minimum(0d);
         scalesLinear.maximum(50d);
         scalesLinear.ticks("{interval:5}");
+
+        Linear scalesLinear2 = Linear.instantiate();  //맥박 수치
+        scalesLinear2.minimum(40d);
+        scalesLinear2.maximum(220d);
+        scalesLinear2.ticks("{interval:10}");
         
         cartesian.yAxis(0).scale(scalesLinear);
 
@@ -92,23 +139,30 @@ public class GraphActivity extends AppCompatActivity {
         extraYAxis.labels()
                 .padding(0d,0d,0d,5d);
 
-
         cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
+
         List<DataEntry> seriesData = new ArrayList<>();
-        seriesData.add(new CustomDataEntry("01", 22.5, 33.3, 65));
-        seriesData.add(new CustomDataEntry("02", 25.5, 37.3, 77));
-        seriesData.add(new CustomDataEntry("03", 26.5, 32.5, 80));
-        seriesData.add(new CustomDataEntry("04", 18.5, 28.3, 88));
-        seriesData.add(new CustomDataEntry("05", 28.5, 25.7, 50));
 
 
+        while(!c.isAfterLast()) {
+
+            tempAmb= c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_AMBIENT_TEMPERATURE));
+            tempB = c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BABY_TEMPERATURE));
+            bpm=c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BPM));
+
+            seriesData.add(new ValueDataEntry("tempAmb", tempAmb));
+            seriesData.add(new ValueDataEntry("tempB", tempB));
+            seriesData.add(new ValueDataEntry("bpm", bpm));
+
+            c.moveToNext();
+        }
 
         Set set = Set.instantiate();
         set.data(seriesData);
-        Mapping tempAmbData = set.mapAs("{ x: 'x', value: 'tempAmb' }");
-        Mapping tempBData = set.mapAs("{ x: 'x', value: 'tempB' }");
-        Mapping PulseData = set.mapAs("{ x: 'x', value: 'bpm' }" );
+        Mapping tempAmbData = set.mapAs("{ time1: 'time1', value: 'tempAmb' }");
+        Mapping tempBData = set.mapAs("{ time1: 'time1', value: 'tempB' }");
+        Mapping PulseData = set.mapAs("{ time1: 'time1', value: 'bpm' }" );
 
 
         Line seriesA = cartesian.line(tempAmbData);
@@ -120,7 +174,7 @@ public class GraphActivity extends AppCompatActivity {
                 .size(5d);
         seriesA.tooltip()
                 .position("right")
-                .anchor(Anchor.LEFT_CENTER)
+                .anchor(Anchor.CENTER)
                 .offsetX(5d)
                 .offsetY(5d);
 
@@ -149,7 +203,7 @@ public class GraphActivity extends AppCompatActivity {
                 .anchor(Anchor.CENTER_BOTTOM)
                 .offsetX(0d)
                 .offsetY(5d)
-                .format("${%Value}{groupsSeparator:}");
+                .format("{Value}{groupsSeparator:}");
 
         cartesian.legend().enabled(true);
         cartesian.legend().fontSize(15d);
@@ -159,13 +213,19 @@ public class GraphActivity extends AppCompatActivity {
 
     }
 
-    private class CustomDataEntry extends ValueDataEntry {
 
-        CustomDataEntry(String x,Number tempAmb, Number tempB, Number bpm) {
-            super(x, tempAmb);
+
+    }
+
+    /*private class CustomDataEntry extends ValueDataEntry {
+
+        CustomDataEntry(String time1,Number tempAmb, Number tempB, Number bpm) {
+            super(time1, tempAmb);
             setValue("tempB", tempB);
             setValue("bpm", bpm);
         }
 
-    }
-}
+    }*/
+
+
+
