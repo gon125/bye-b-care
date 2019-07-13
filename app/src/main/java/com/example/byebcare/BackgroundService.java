@@ -74,6 +74,9 @@ public class BackgroundService extends Service {
                 case G.STOP_FOREGROUND_SERVICE :
                     stopService(new Intent(getApplication(), BackgroundService.class));
                     break;
+                case G.SAVE_BIO_DATA :
+                    saveBioData();
+                    break;
                 case G.DO_POLLING :
                     try {
                         Document doc = null;
@@ -87,16 +90,15 @@ public class BackgroundService extends Service {
                                 sendMessageAtFrontOfQueue(obtainMessage(G.STOP_POLLING));
                                 break;
                             } else {
-                                Iterator<String> it = jsonObject.keys();
+                                Iterator<String> it = list.keySet().iterator();
                                 while (it.hasNext()) {
                                     String key = it.next();
-                                    notiText += (list.get(key) + " : " + jsonObject.get(key) + " ");
+                                    notiText += (list.get(key) + " : " + jsonObject.get(key) + "              ");
                                 }
                                 sendNotification("Your Baby's Current State", notiText, G.NOTIFICATION_DEFAULT);
                                 notiText = "";
                             }
-                            //Store data to db
-                            saveBioData();
+                            sendEmptyMessageDelayed(G.SAVE_BIO_DATA, G.SAVE_BIO_DATA_FREQUENCY);
                         }
                     } catch (IOException e) {
                         sendNotification("ByeBCare", "Poor Server Connection. Please Check Your Baby.", G.NOTIFICATION_DEFAULT);
@@ -107,7 +109,6 @@ public class BackgroundService extends Service {
                     sendEmptyMessageDelayed(G.DO_POLLING, G.POLLING_FREQUENCY);
                     break;
             }
-            //emergencyCall();
             //Stop the service using the startId, so we don't stop the service that we use
             //stopSelf(msg.arg1);
         }
@@ -126,9 +127,6 @@ public class BackgroundService extends Service {
         db = BioDataDbHelper.getInstance(this).getWritableDatabase();
 
         list.put("O", "체온");
-        list.put("X", "X축");
-        list.put("Y", "Y축");
-        list.put("Z", "Z축");
         list.put("A", "주변온도");
         list.put("B", "맥박");
     }
