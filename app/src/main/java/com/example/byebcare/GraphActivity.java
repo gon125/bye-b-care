@@ -4,18 +4,11 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
-import android.graphics.Color;
-import android.graphics.DashPathEffect;
 import android.os.Bundle;
-import android.util.Log;
-import android.provider.ContactsContract;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import org.json.JSONException;
-import org.json.JSONObject;
 
-import com.anychart.APIlib;
 import com.anychart.AnyChart;
 import com.anychart.AnyChartView;
 import com.anychart.chart.common.dataentry.DataEntry;
@@ -34,27 +27,10 @@ import com.anychart.graphics.vector.Stroke;
 import com.anychart.graphics.vector.StrokeLineCap;
 import com.anychart.graphics.vector.StrokeLineJoin;
 import com.anychart.scales.Linear;
-import com.anychart.core.cartesian.series.Base;
-import com.github.mikephil.charting.renderer.scatter.ChevronUpShapeRenderer;
 
 
-import org.json.JSONArray;
-
-import java.text.SimpleDateFormat;
-import java.text.DateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.TimeUnit;
-
-import static java.lang.Thread.sleep;
 
 import com.example.byebcare.BioDataContract.BioDataDbHelper;
 import com.example.byebcare.BioDataContract.BioDataEntry;
@@ -62,24 +38,26 @@ import com.example.byebcare.BioDataContract.BioDataEntry;
 
 public class GraphActivity extends AppCompatActivity {
 
-    private JSONObject jsonObject;
     private double tempAmb;
     private double tempB;
     private int bpm;
     private BioDataDbHelper bioDataDbHelper;
-    static int currnettime = 0 ;
 
-    @BindView(R.id.any_chart_view) AnyChartView anyChartView;
 
-    public GraphActivity(){
+    @BindView(R.id.any_chart_view)
+    AnyChartView anyChartView;
+
+    public GraphActivity() {
 
     }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_graph);
         ButterKnife.bind(this);
         anyChartView.setProgressBar(findViewById(R.id.progress_bar));
+
         bioDataDbHelper = BioDataDbHelper.getInstance(this);
 
         SQLiteDatabase bioDB = bioDataDbHelper.getWritableDatabase();
@@ -91,11 +69,11 @@ public class GraphActivity extends AppCompatActivity {
                 null,
                 null,
                 null,
-                BioDataEntry.COLUMN_NAME_TIME+" DESC",
-                "10");
+                BioDataEntry.COLUMN_NAME_TIME + " DESC",
+                "50");
 
         Cartesian cartesian = AnyChart.line();
-       //Cartesian cartesian2 = AnyChart.column();
+        //Cartesian cartesian2 = AnyChart.column();
 
         cartesian.animation(true);
 
@@ -114,11 +92,11 @@ public class GraphActivity extends AppCompatActivity {
         cartesian.lineMarker(0)    //체온 라인
                 .value(80d)
                 .axis(cartesian.yAxis(0))
-                .stroke("#A5B3B3",1d,"5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
+                .stroke("#A5B3B3", 1d, "5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
         cartesian.lineMarker(1)    // 맥박 라인
                 .value(20d)
                 .axis(cartesian.yAxis(1))
-                .stroke("#A5B3B3",1d,"5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
+                .stroke("#A5B3B3", 1d, "5 2", StrokeLineJoin.ROUND, StrokeLineCap.ROUND);
 
         Linear scalesLinear = Linear.instantiate();   //체온 수치
         scalesLinear.minimum(0d);
@@ -127,9 +105,9 @@ public class GraphActivity extends AppCompatActivity {
 
         Linear scalesLinear2 = Linear.instantiate();  //맥박 수치
         scalesLinear2.minimum(40d);
-        scalesLinear2.maximum(220d);
+        scalesLinear2.maximum(400d);
         scalesLinear2.ticks("{interval:10}");
-        
+
         cartesian.yAxis(0).scale(scalesLinear);
 
         com.anychart.core.axes.Linear extraYAxis = cartesian.yAxis(1);
@@ -137,32 +115,31 @@ public class GraphActivity extends AppCompatActivity {
         extraYAxis.orientation(Orientation.RIGHT)
                 .scale(scalesLinear2);
         extraYAxis.labels()
-                .padding(0d,0d,0d,5d);
+                .padding(0d, 0d, 0d, 5d);
 
         cartesian.xAxis(0).labels().padding(5d, 5d, 5d, 5d);
 
 
         List<DataEntry> seriesData = new ArrayList<>();
 
+        c.moveToFirst();
+        int i = 0;
 
-        while(!c.isAfterLast()) {
+        while (!c.isAfterLast()) {
 
-            tempAmb= c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_AMBIENT_TEMPERATURE));
-            tempB = c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BABY_TEMPERATURE));
-            bpm=c.getType(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BPM));
+            tempAmb = c.getDouble(c.getColumnIndex(BioDataEntry.COLUMN_NAME_AMBIENT_TEMPERATURE));
+            tempB = c.getDouble(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BABY_TEMPERATURE));
+            bpm = c.getInt(c.getColumnIndex(BioDataEntry.COLUMN_NAME_BPM));
 
-            seriesData.add(new ValueDataEntry("tempAmb", tempAmb));
-            seriesData.add(new ValueDataEntry("tempB", tempB));
-            seriesData.add(new ValueDataEntry("bpm", bpm));
-
+            seriesData.add(new CustomDataEntry(Integer.toString(++i), tempAmb, tempB, bpm));
             c.moveToNext();
         }
 
         Set set = Set.instantiate();
         set.data(seriesData);
-        Mapping tempAmbData = set.mapAs("{ time1: 'time1', value: 'tempAmb' }");
-        Mapping tempBData = set.mapAs("{ time1: 'time1', value: 'tempB' }");
-        Mapping PulseData = set.mapAs("{ time1: 'time1', value: 'bpm' }" );
+        Mapping tempAmbData = set.mapAs("{ x: 'x', value: 'tempAmb' }");
+        Mapping tempBData = set.mapAs("{ x: 'x', value: 'tempB' }");
+        Mapping PulseData = set.mapAs("{ x: 'x', value: 'bpm' }");
 
 
         Line seriesA = cartesian.line(tempAmbData);
@@ -214,18 +191,16 @@ public class GraphActivity extends AppCompatActivity {
     }
 
 
+    private class CustomDataEntry extends ValueDataEntry {
 
-    }
-
-    /*private class CustomDataEntry extends ValueDataEntry {
-
-        CustomDataEntry(String time1,Number tempAmb, Number tempB, Number bpm) {
-            super(time1, tempAmb);
+        CustomDataEntry(String x, Number tempAmb, Number tempB, Number bpm) {
+            super(x, tempAmb);
             setValue("tempB", tempB);
             setValue("bpm", bpm);
         }
 
-    }*/
+    }
+}
 
 
 
