@@ -3,8 +3,8 @@ package com.example.byebcare;
 public class G {
     private static final int SECONDS = 1000;
 
-
     public static final int POLLING_FREQUENCY = 30 * SECONDS;
+    public static final int SAVE_BIO_DATA_FREQUENCY = 60 * 60 * SECONDS;
     public static final int EMERGENCY_CALL_DELAY = 10 * SECONDS;
 
     //Intent REQUEST_TYPE
@@ -14,6 +14,7 @@ public class G {
     public static final int EMERGENCY_CALL_CANCELED = 3;
     public static final int EMERGENCY_CALL = 4;
     public static final int STOP_FOREGROUND_SERVICE = 5;
+    public static final int SAVE_BIO_DATA = 6;
 
     //NOTIFICATION_TYPE
     public static final int NOTIFICATION_DEFAULT = 0;
