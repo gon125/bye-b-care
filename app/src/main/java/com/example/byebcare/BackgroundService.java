@@ -20,7 +20,6 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.widget.Toast;
-
 import androidx.core.app.NotificationCompat;
 
 import org.json.JSONException;
@@ -69,10 +68,11 @@ public class BackgroundService extends Service {
                     break;
                 case G.EMERGENCY_CALL :
                     if(!emergencyCallCanceled)  { emergencyCall(); }
-                    stopSelf();
+                    stopSelf(msg.arg1);
                     break;
                 case G.STOP_FOREGROUND_SERVICE :
-                    stopService(new Intent(getApplication(), BackgroundService.class));
+                    sendMessageAtFrontOfQueue(obtainMessage(G.STOP_POLLING));
+                    stopSelf(msg.arg1);
                     break;
                 case G.SAVE_BIO_DATA :
                     saveBioData();
@@ -93,7 +93,7 @@ public class BackgroundService extends Service {
                                 Iterator<String> it = list.keySet().iterator();
                                 while (it.hasNext()) {
                                     String key = it.next();
-                                    notiText += (list.get(key) + " : " + jsonObject.get(key) + "              ");
+                                    notiText += (list.get(key) + " : " + jsonObject.get(key) + "                  ");
                                 }
                                 sendNotification("Your Baby's Current State", notiText, G.NOTIFICATION_DEFAULT);
                                 notiText = "";
@@ -109,8 +109,6 @@ public class BackgroundService extends Service {
                     sendEmptyMessageDelayed(G.DO_POLLING, G.POLLING_FREQUENCY);
                     break;
             }
-            //Stop the service using the startId, so we don't stop the service that we use
-            //stopSelf(msg.arg1);
         }
     }
 
@@ -126,9 +124,9 @@ public class BackgroundService extends Service {
         //SQLiteDatabase Starts
         db = BioDataDbHelper.getInstance(this).getWritableDatabase();
 
-        list.put("O", "체온");
-        list.put("A", "주변온도");
-        list.put("B", "맥박");
+        list.put("O", "BT");
+        list.put("A", "AT");
+        list.put("B", "BPM");
     }
 
     @Override
@@ -180,7 +178,7 @@ public class BackgroundService extends Service {
                 builder.setTimeoutAfter(G.NOTIFICATION_TIMEOUT);
                 break;
             case G.NOTIFICATION_EMERGENCY:
-                builder.setTimeoutAfter(G.NOTIFICATION_TIMEOUT);
+                builder.setTimeoutAfter(G.NOTIFICATION_EMERGENCY_TIMEOUT);
                 builder.addAction(createEmergencyAction());
                 break;
             case G.NOTIFICATION_FOREGROUND:
@@ -275,6 +273,13 @@ public class BackgroundService extends Service {
     }
 
     private Boolean isBabyInDanger() {
+        try {
+           Double BT = jsonObject.getDouble("O");
+            if (BT > 40) return true;
+            else return false;
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
         return false;
     }
 
