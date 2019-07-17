@@ -23,6 +23,7 @@ public class G {
 
     //NOTIFICATION_TIMEOUT
     public static final int NOTIFICATION_TIMEOUT = 2 * SECONDS;
+    public static final int NOTIFICATION_EMERGENCY_TIMEOUT = 10 * SECONDS;
 
     //UNIQUE NOTIFICATION CHANNEL ID FOR FOREGROUND NOTIFICATION
     public static final int FOREGROUND_ID = 1;
