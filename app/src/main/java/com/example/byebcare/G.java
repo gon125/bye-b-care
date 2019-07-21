@@ -17,9 +17,9 @@ public class G {
     public static final int SAVE_BIO_DATA = 6;
 
     //NOTIFICATION_TYPE
-    public static final int NOTIFICATION_DEFAULT = 0;
+    public static final int NOTIFICATION_DEFAULT = 2;
     public static final int NOTIFICATION_EMERGENCY = 3;
-    public static final int NOTIFICATION_FOREGROUND = 7;
+    public static final int NOTIFICATION_FOREGROUND = 1;
 
     //NOTIFICATION_TIMEOUT
     public static final int NOTIFICATION_TIMEOUT = 2 * SECONDS;

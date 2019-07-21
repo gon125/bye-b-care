@@ -275,7 +275,15 @@ public class BackgroundService extends Service {
     private Boolean isBabyInDanger() {
         try {
            Double BT = jsonObject.getDouble("O");
-            if (BT > 40) return true;
+           Integer BPM = jsonObject.getInt("B");
+           Integer X = jsonObject.getInt("X");
+           Integer Y = jsonObject.getInt("Y");
+           Integer Z = jsonObject.getInt("Z");
+
+            if (BT > 40 || BT < 20) return true;
+           // if (BPM > 160 || BPM < 60) return true;
+            if (Z > 10000) return true;
+
             else return false;
         } catch (JSONException e) {
             e.printStackTrace();
