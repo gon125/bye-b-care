@@ -5,7 +5,7 @@ An Android Application for ByeBCare service.
 
 
 ## Demo Video
-https://www.youtube.com/watch?v=aP4nT3ee2eU
+https://www.youtube.com/watch?v=aP4nT3ee2eU </br>
 ![ByeBCareGIF](https://user-images.githubusercontent.com/20037035/116017032-7179e680-a679-11eb-8bc2-e8d94ccf02d2.gif)
 
 
