@@ -1,5 +1,5 @@
 # bye-b-care
-
+2019.06.27~2019.07.31
 An Android Application for ByeBCare service.
 
 
